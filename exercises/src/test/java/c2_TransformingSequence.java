@@ -103,8 +103,7 @@ public class c2_TransformingSequence extends TransformingSequenceBase {
      */
     @Test
     public void sequence_sum() {
-        Mono<Integer> sum = null;
-        sum = numerical_service()
+        Mono<Integer> sum = numerical_service()
                 .reduce(Integer::sum);
         ;
 
@@ -120,7 +119,7 @@ public class c2_TransformingSequence extends TransformingSequenceBase {
     @Test
     public void sum_each_successive() {
         Flux<Integer> sumEach = numerical_service()
-                //todo: do your changes here
+                .scan(Integer::sum)
                 ;
 
         StepVerifier.create(sumEach)

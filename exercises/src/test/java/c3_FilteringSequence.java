@@ -41,13 +41,8 @@ public class c3_FilteringSequence extends FilteringSequenceBase {
      */
     @Test
     public void needle_in_a_haystack() {
-        Flux<Object> strings = mashed_data_service()
-                .flatMap(item -> {
-                    if(item instanceof String){
-                        return Mono.just(item);
-                    }
-                    return Mono.empty();
-                })
+        Flux<String> strings = mashed_data_service()
+                .ofType(String.class)
                 ;
 
         StepVerifier.create(strings)
@@ -78,7 +73,9 @@ public class c3_FilteringSequence extends FilteringSequenceBase {
     @Test
     public void watch_out_for_the_spiders() {
         Mono<String> firstResult;
-        firstResult = fragile_service().take(1,true).singleOrEmpty();
+        firstResult = fragile_service()
+                .take(1,true)
+                .singleOrEmpty();
 
         //don't change code below
         StepVerifier.create(firstResult)
@@ -121,7 +118,8 @@ public class c3_FilteringSequence extends FilteringSequenceBase {
     @Test
     public void golden_middle() {
         Flux<Integer> numbers = number_service()
-                //todo: do your changes here
+                .skip(100)
+                .take(100,true)
                 ;
 
         StepVerifier.create(numbers)

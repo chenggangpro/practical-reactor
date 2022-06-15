@@ -6,6 +6,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -199,9 +200,8 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void instant_search() {
         //todo: feel free to change code as you need
-        autoComplete(null);
         Flux<String> suggestions = userSearchInput()
-                //todo: use one operator only
+                .switchMap(this::autoComplete);
                 ;
 
         //don't change below this line
@@ -220,11 +220,15 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void prettify() {
         //todo: feel free to change code as you need
         //todo: use when,and,then...
-        Mono<Boolean> successful = null;
+        Mono<Boolean> successful = openFile()
+                .then(writeToFile("0x3522285912341"))
+                .then(closeFile())
+                .then(Mono.just(true))
+                .onErrorReturn(false);
 
-        openFile();
-        writeToFile("0x3522285912341");
-        closeFile();
+//        openFile();
+//        writeToFile("0x3522285912341");
+//        closeFile();
 
         //don't change below this line
         StepVerifier.create(successful)
@@ -242,9 +246,9 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void one_to_n() {
         //todo: feel free to change code as you need
-        Flux<String> fileLines = null;
-        openFile();
-        readFile();
+        Flux<String> fileLines = openFile().thenMany(readFile());
+//        openFile();
+//        readFile();
 
         StepVerifier.create(fileLines)
                     .expectNext("0x1", "0x2", "0x3")
@@ -258,9 +262,14 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void acid_durability() {
         //todo: feel free to change code as you need
-        Flux<String> committedTasksIds = null;
-        tasksToExecute();
-        commitTask(null);
+        Flux<String> committedTasksIds = tasksToExecute()
+                .flatMapSequential(Function.identity())
+                .flatMapSequential(taskId -> this.commitTask(taskId)
+                        .then(Mono.just(taskId))
+                );
+
+//        tasksToExecute();
+//        commitTask(null);
 
         //don't change below this line
         StepVerifier.create(committedTasksIds)
@@ -278,9 +287,8 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void major_merger() {
         //todo: feel free to change code as you need
-        Flux<String> microsoftBlizzardCorp =
-                microsoftTitles();
-        blizzardTitles();
+        Flux<String> microsoftBlizzardCorp = microsoftTitles().mergeWith(blizzardTitles());
+//        blizzardTitles();
 
         //don't change below this line
         StepVerifier.create(microsoftBlizzardCorp)
@@ -304,9 +312,10 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void car_factory() {
         //todo: feel free to change code as you need
-        Flux<Car> producedCars = null;
-        carChassisProducer();
-        carEngineProducer();
+        Flux<Car> producedCars = Flux.zip(carChassisProducer(),carEngineProducer())
+                .map(tuple -> new Car(tuple.getT1(),tuple.getT2()));
+//        carChassisProducer();
+//        carEngineProducer();
 
         //don't change below this line
         StepVerifier.create(producedCars)
@@ -327,9 +336,20 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
 
     //todo: implement this method based on instructions
     public Mono<String> chooseSource() {
-        sourceA(); //<- choose if sourceRef == "A"
-        sourceB(); //<- choose if sourceRef == "B"
-        return Mono.empty(); //otherwise, return empty
+        return Mono.fromSupplier(() -> sourceRef)
+                .map(AtomicReference::get)
+                .flatMap(value -> {
+                    if("A".equals(value)){
+                        return sourceA();
+                    }
+                    if("B".equals(value)){
+                        return sourceB();
+                    }
+                    return Mono.empty();
+                });
+//        sourceA(); //<- choose if sourceRef == "A"
+//        sourceB(); //<- choose if sourceRef == "B"
+//        return Mono.empty(); //otherwise, return empty
     }
 
     @Test
@@ -360,9 +380,14 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
         BlockHound.install(); //don't change this line, blocking = cheating!
 
         //todo: feel free to change code as you need
-        Flux<String> stream = StreamingConnection.startStreaming()
-                                                 .flatMapMany(Function.identity());
-        StreamingConnection.closeConnection();
+        Flux<String> stream = Flux.usingWhen(
+                StreamingConnection.startStreaming(),
+                stringFlux -> stringFlux,
+                stringFlux -> stringFlux.flatMap(item -> StreamingConnection.closeConnection())
+        );
+//        Flux<String> stream = StreamingConnection.startStreaming()
+//                                                 .flatMapMany(Function.identity());
+//        StreamingConnection.closeConnection();
 
         //don't change below this line
         StepVerifier.create(stream)

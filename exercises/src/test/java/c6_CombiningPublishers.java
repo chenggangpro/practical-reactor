@@ -40,9 +40,8 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
         Hooks.enableContextLossTracking(); //used for testing - detects if you are cheating!
 
         //todo: feel free to change code as you need
-        Mono<String> currentUserEmail = null;
         Mono<String> currentUserMono = getCurrentUser();
-        getUserEmail(null);
+        Mono<String> currentUserEmail = currentUserMono.flatMap(this::getUserEmail);
 
         //don't change below this line
         StepVerifier.create(currentUserEmail)
@@ -60,8 +59,8 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void task_executor() {
         //todo: feel free to change code as you need
-        Flux<Void> tasks = null;
-        taskExecutor();
+        Flux<Void> tasks = taskExecutor()
+                .flatMap(Function.identity());
 
         //don't change below this line
         StepVerifier.create(tasks)
@@ -79,8 +78,8 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void streaming_service() {
         //todo: feel free to change code as you need
-        Flux<Message> messageFlux = null;
-        streamingService();
+        Flux<Message> messageFlux = streamingService()
+                .flatMapMany(Function.identity());
 
         //don't change below this line
         StepVerifier.create(messageFlux)
@@ -98,10 +97,8 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void i_am_rubber_you_are_glue() {
         //todo: feel free to change code as you need
-        Flux<Integer> numbers = null;
-        numberService1();
-        numberService2();
-
+        Flux<Integer> numbers = numberService1().concatWith(numberService2());
+        //Flux<Integer> numbers = numberService1().mergeWith(numberService2());
         //don't change below this line
         StepVerifier.create(numbers)
                     .expectNext(1, 2, 3, 4, 5, 6, 7)
@@ -124,8 +121,7 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void task_executor_again() {
         //todo: feel free to change code as you need
-        Flux<Void> tasks = null;
-        taskExecutor();
+        Flux<Void> tasks = taskExecutor().concatMap(Function.identity());
 
         //don't change below this line
         StepVerifier.create(tasks)
@@ -142,9 +138,7 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void need_for_speed() {
         //todo: feel free to change code as you need
-        Flux<String> stonks = null;
-        getStocksGrpc();
-        getStocksRest();
+        Flux<String> stonks = Flux.firstWithValue(getStocksGrpc(),getStocksRest());
 
         //don't change below this line
         StepVerifier.create(stonks)
@@ -160,9 +154,8 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void plan_b() {
         //todo: feel free to change code as you need
-        Flux<String> stonks = null;
-        getStocksLocalCache();
-        getStocksRest();
+        Flux<String> stonks = getStocksLocalCache()
+                .switchIfEmpty(getStocksRest());
 
         //don't change below this line
         StepVerifier.create(stonks)
@@ -179,9 +172,13 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void mail_box_switcher() {
         //todo: feel free to change code as you need
-        Flux<Message> myMail = null;
-        mailBoxPrimary();
-        mailBoxSecondary();
+        Flux<Message> myMail = mailBoxPrimary()
+                .switchOnFirst((signal, messageFlux) -> {
+                    if(signal.hasValue() && signal.get().metaData.equals("spam")){
+                        return mailBoxSecondary();
+                    }
+                    return messageFlux;
+                });
 
         //don't change below this line
         StepVerifier.create(myMail)

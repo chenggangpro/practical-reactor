@@ -198,7 +198,7 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
                                  .doFirst(() -> sideEffects.add("one"));
 
         List<String> orderOfExecution =
-                Arrays.asList("todo", "todo", "todo"); //todo: change this line only
+                Arrays.asList("one", "two", "three");
 
         StepVerifier.create(just)
                     .expectNext(true)
@@ -222,7 +222,7 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
         CopyOnWriteArrayList<String> signals = new CopyOnWriteArrayList<>();
 
         Flux<Integer> flux = Flux.just(1, 2, 3)
-                //todo: change this line only
+                .doOnEach(integerSignal -> signals.add(integerSignal.getType().name()))
                 ;
 
         StepVerifier.create(flux)

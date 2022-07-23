@@ -47,6 +47,7 @@ public class c9_ExecutionControl extends ExecutionControlBase {
     public void slow_down_there_buckaroo() {
         long threadId = Thread.currentThread().getId();
         Flux<String> notifications = readNotifications()
+                .delayElements(Duration.ofSeconds(1))
                 .doOnNext(System.out::println)
                 //todo: change this line only
                 ;
@@ -77,8 +78,8 @@ public class c9_ExecutionControl extends ExecutionControlBase {
     public void ready_set_go() {
         //todo: feel free to change code as you need
         Flux<String> tasks = tasks()
-                .flatMap(Function.identity());
-        semaphore();
+                //Delay the subscription to this Mono until another Publisher signals a value or completes.
+                .concatMap(task -> task.delaySubscription(semaphore()));
 
         //don't change code below
         StepVerifier.create(tasks)
@@ -104,6 +105,7 @@ public class c9_ExecutionControl extends ExecutionControlBase {
                                   assert NonBlocking.class.isAssignableFrom(Thread.currentThread().getClass());
                                   System.out.println("Task executing on: " + currentThread.getName());
                               })
+                              .publishOn(Schedulers.parallel())
                               //todo: change this line only
                               .then();
 
@@ -121,7 +123,7 @@ public class c9_ExecutionControl extends ExecutionControlBase {
         BlockHound.install(); //don't change this line
 
         Mono<Void> task = Mono.fromRunnable(ExecutionControlBase::blockingCall)
-                              .subscribeOn(Schedulers.single())//todo: change this line only
+                              .subscribeOn(Schedulers.boundedElastic())//todo: change this line only
                               .then();
 
         StepVerifier.create(task)

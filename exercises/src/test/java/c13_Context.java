@@ -1,6 +1,7 @@
 import org.junit.jupiter.api.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 import reactor.test.StepVerifier;
 import reactor.util.context.Context;
 
@@ -32,7 +33,11 @@ public class c13_Context extends ContextBase {
      */
     public Mono<Message> messageHandler(String payload) {
         //todo: do your changes withing this method
-        return Mono.just(new Message("set correlation_id from context here", payload));
+        return Mono.deferContextual(contextView -> {
+            return Mono.justOrEmpty(contextView.getOrEmpty(HTTP_CORRELATION_ID))
+                    .ofType(String.class)
+                    .flatMap(correlationId -> Mono.just(new Message(correlationId, payload)));
+        });
     }
 
     @Test
@@ -55,7 +60,7 @@ public class c13_Context extends ContextBase {
         Mono<Void> repeat = Mono.deferContextual(ctx -> {
             ctx.get(AtomicInteger.class).incrementAndGet();
             return openConnection();
-        });
+        }).contextWrite(Context.of(AtomicInteger.class,new AtomicInteger()));
         //todo: change this line only
         ;
 
@@ -79,10 +84,27 @@ public class c13_Context extends ContextBase {
         AtomicInteger pageWithError = new AtomicInteger(); //todo: set this field when error occurs
 
         //todo: start from here
-        Flux<Integer> results = getPage(0)
+        Flux<Integer> results = Flux.deferContextual(contextView -> Mono
+                .justOrEmpty(contextView.get(AtomicInteger.class))
+                .ofType(AtomicInteger.class)
+                .flatMap(atomicInteger -> getPage(atomicInteger.get()))
+                .doOnEach(single-> {
+                    if (single.getType() == SignalType.ON_NEXT) {
+                        single.getContextView().get(AtomicInteger.class).incrementAndGet();
+                    } else if (single.getType() == SignalType.ON_ERROR) {
+                        pageWithError.set(single.getContextView().get(AtomicInteger.class).get());
+                        System.out.println(
+                                "Error has occurred: " + single.getThrowable().getMessage());
+                        System.out.println("Error occurred at page: " + single.getContextView()
+                                .get(AtomicInteger.class)
+                                .getAndIncrement());
+                    }
+                })
+                .onErrorResume(e -> Mono.empty())
                 .flatMapMany(Page::getResult)
                 .repeat(10)
-                .doOnNext(i -> System.out.println("Received: " + i));
+                .doOnNext(i -> System.out.println("Received: " + i)))
+                .contextWrite(Context.of(AtomicInteger.class, new AtomicInteger(0)));
 
 
         //don't change this code
